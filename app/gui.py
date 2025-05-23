@@ -1,5 +1,4 @@
 # app/gui.py
-
 from PyQt5 import QtWidgets
 
 class MainWindow(QtWidgets.QMainWindow):
