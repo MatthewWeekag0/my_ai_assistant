@@ -7,7 +7,11 @@ class Config:
     Утилита для чтения настроек из config.ini.
     """
 
-    def __init__(self, path: str = 'config.ini') -> None:
+    def __init__(self, path: str = None) -> None:
+        # По умолчанию ищем config.ini в корне пакета app
+        if path is None:
+            base = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+            path = os.path.join(base, 'config.ini')
         if not os.path.isfile(path):
             raise FileNotFoundError(f"Config file '{path}' not found.")
         self._cfg = configparser.ConfigParser()
