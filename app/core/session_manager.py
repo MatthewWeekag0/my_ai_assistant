@@ -2,13 +2,14 @@
 import sqlite3
 from datetime import datetime
 from typing import List, Tuple
+from app.core.config import Config
 
 class SessionManager:
-    """
-    Сохраняет и извлекает сессии запросов в локальной SQLite-БД.
-    """
+    """Сессии запросов в SQLite (путь из config.ini)."""
 
-    def __init__(self, db_path: str = 'sessions.db') -> None:
+    def __init__(self, config_path: str = 'config.ini') -> None:
+        cfg = Config(config_path)
+        db_path = cfg.get('MEMORY', 'DB_PATH', fallback='sessions.db')
         self.conn = sqlite3.connect(db_path)
         self._create_table()
 
@@ -27,9 +28,6 @@ class SessionManager:
         self.conn.commit()
 
     def save_session(self, prompt: str, response: str) -> None:
-        """
-        Сохраняет новую сессию с отметкой времени.
-        """
         cursor = self.conn.cursor()
         timestamp = datetime.now().isoformat()
         cursor.execute(
@@ -39,9 +37,9 @@ class SessionManager:
         self.conn.commit()
 
     def get_sessions(self) -> List[Tuple[int, str, str, str]]:
-        """
-        Возвращает все сохранённые сессии.
-        """
         cursor = self.conn.cursor()
         cursor.execute('SELECT * FROM sessions')
         return cursor.fetchall()
+
+    def __del__(self):
+        self.conn.close()

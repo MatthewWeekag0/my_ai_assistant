@@ -1,11 +1,14 @@
-# app/system_service.py
+# app/core/system_service.py
 import psutil
 import os
+from app.core.config import Config
 
-class SystemModule:
-    """
-    Выполняет простые системные команды по ключевым словам.
-    """
+class SystemService:
+    """Системные команды: CPU, RAM, создание папок (DEFAULT_FOLDER из config.ini)."""
+
+    def __init__(self, config_path: str = 'config.ini') -> None:
+        cfg = Config(config_path)
+        self.default_folder = cfg.get('SYSTEM', 'DEFAULT_FOLDER', fallback='NewFolder')
 
     def execute_command(self, text: str) -> str:
         lower = text.lower()
@@ -14,7 +17,7 @@ class SystemModule:
         elif "свободной памяти" in lower:
             return f"ОЗУ занято на {psutil.virtual_memory().percent}%"
         elif "создай папку" in lower:
-            os.makedirs("НоваяПапка", exist_ok=True)
-            return "Папка 'НоваяПапка' создана."
+            os.makedirs(self.default_folder, exist_ok=True)
+            return f"Папка '{self.default_folder}' создана."
         else:
             return "Не распознал команду."

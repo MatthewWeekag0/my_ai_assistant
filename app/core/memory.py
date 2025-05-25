@@ -1,13 +1,14 @@
-# app/memory.py
+# app/core/memory.py
 import sqlite3
 from typing import List, Tuple
+from app.core.config import Config
 
 class Memory:
-    """
-    Краткосрочная память диалога + сохранение в SQLite.
-    """
+    """Краткосрочная память диалога + SQLite (путь из config.ini)."""
 
-    def __init__(self, db_path: str = 'memory.db') -> None:
+    def __init__(self, config_path: str = 'config.ini') -> None:
+        cfg = Config(config_path)
+        db_path = cfg.get('MEMORY', 'DB_PATH', fallback='memory.db')
         self.conn = sqlite3.connect(db_path)
         self._create_table()
         self.history: List[Tuple[str, str]] = []
@@ -37,3 +38,6 @@ class Memory:
 
     def get_context(self, n: int = 5) -> List[Tuple[str, str]]:
         return self.history[-n:]
+
+    def __del__(self):
+        self.conn.close()

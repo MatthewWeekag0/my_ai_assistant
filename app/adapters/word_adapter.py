@@ -2,13 +2,14 @@
 import docx
 import os
 from typing import List, Any
+from app.core.config import Config
 
-class WordModule:
-    """
-    Анализ Word-документа через python-docx.
-    """
+class WordAdapter:
+    """Адаптер DOCX: читает SPELLCHECK_LANGUAGE из config.ini."""
 
-    def __init__(self, router: Any) -> None:
+    def __init__(self, router: Any, config_path: str = 'config.ini') -> None:
+        cfg = Config(config_path)
+        self.language = cfg.get('WORD', 'SPELLCHECK_LANGUAGE', fallback='ru-RU')
         self.router = router
 
     def analyze(self, filepath: str) -> str:
@@ -23,5 +24,5 @@ class WordModule:
         if not paragraphs:
             return "Документ пуст."
         text = "\n".join(paragraphs)
-        prompt = f"Проверь текст на ошибки:\n\n{text}"
+        prompt = f"Проверь текст ({self.language}) на ошибки:\n\n{text}"
         return self.router.handle_request(prompt)

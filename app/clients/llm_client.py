@@ -1,42 +1,37 @@
-# app/llm_client.py
+# app/clients/llm_client.py
+import os
+import logging
+from typing import List, Dict, Any
+import openai
+from openai.error import RateLimitError, OpenAIError
 
-import asyncio
-from openai import AsyncOpenAI
-import httpx
+logger = logging.getLogger(__name__)
 
-class LLMModule:
-    def __init__(self, openai_key):
-        self.client = AsyncOpenAI(api_key=openai_key)
+class LLMClient:
+    def __init__(self, api_key: str = None, model_name: str = "gpt-3.5-turbo") -> None:
+        key = api_key or os.getenv("OPENAI_API_KEY")
+        if not key:
+            raise ValueError("Не задан OPENAI_API_KEY.")
+        openai.api_key = key
+        self.model_name = model_name
 
-    async def _query_chatgpt(self, text):
+    def get_response(self, prompt: str, context: List[Dict[str, str]] = None,
+                     temperature: float = 0.7, max_tokens: int = 150) -> str:
+        messages = []
+        if context:
+            messages = [{"role": "user", "content": c[0]} for c in context]
+        messages.append({"role": "user", "content": prompt})
         try:
-            response = await self.client.chat.completions.create(
-                model="gpt-4",
-                messages=[{"role": "user", "content": text}],
-                timeout=10  # Таймаут в секундах
+            resp = openai.ChatCompletion.create(
+                model=self.model_name,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens
             )
-            return response.choices[0].message.content
-        except Exception as e:
-            return f"Ошибка при запросе к ChatGPT: {e}"
-
-    async def _query_gemini(self, text):
-        try:
-            # Псевдокод для Gemini API с использованием httpx
-            async with httpx.AsyncClient(timeout=10) as client:
-                response = await client.post(
-                    "https://api.gemini.com/v1/chat/completions",
-                    json={"messages": [{"role": "user", "content": text}]},
-                    headers={"Authorization": "Bearer YOUR_GEMINI_API_KEY"}
-                )
-                response.raise_for_status()
-                data = response.json()
-                return data["choices"][0]["message"]["content"]
-        except Exception as e:
-            return f"Ошибка при запросе к Gemini: {e}"
-
-    async def query_llm(self, text):
-        chatgpt_task = self._query_chatgpt(text)
-        gemini_task = self._query_gemini(text)
-        chatgpt_ans, gemini_ans = await asyncio.gather(chatgpt_task, gemini_task)
-        # Выбор ответа с большей длиной
-        return chatgpt_ans if len(chatgpt_ans) >= len(gemini_ans) else gemini_ans
+            return resp.choices[0].message.content.strip()
+        except RateLimitError as e:
+            logger.warning("Rate limit exceeded: %s", e)
+            raise
+        except OpenAIError as e:
+            logger.error("OpenAI error: %s", e)
+            raise

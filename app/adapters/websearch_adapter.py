@@ -1,43 +1,34 @@
 # app/adapters/websearch_adapter.py
 import requests
-import configparser
-import os
-from typing import Tuple, Any
+from typing import Tuple
+from app.core.config import Config
 
-class WebSearchModule:
-    """
-    Поиск через Google Custom Search API.
-    """
+class WebSearchAdapter:
+    """Гугл-поиск: читает API_KEY и SEARCH_ENGINE_ID из config.ini."""
 
     def __init__(self, config_path: str = 'config.ini') -> None:
-        self.api_key, self.search_engine_id = self._load_config(config_path)
-
-    def _load_config(self, config_path: str) -> Tuple[str, str]:
-        if not os.path.isfile(config_path):
-            raise FileNotFoundError(f"Конфиг '{config_path}' не найден.")
-        cfg = configparser.ConfigParser()
-        cfg.read(config_path)
-        try:
-            return cfg['GOOGLE']['API_KEY'], cfg['GOOGLE']['SEARCH_ENGINE_ID']
-        except KeyError as e:
-            raise KeyError(f"В секции [GOOGLE] отсутствует ключ: {e}")
+        cfg = Config(config_path)
+        self.api_key = cfg.get('GOOGLE', 'API_KEY')
+        self.engine_id = cfg.get('GOOGLE', 'SEARCH_ENGINE_ID')
+        if not self.api_key or not self.engine_id:
+            raise ValueError("В config.ini отсутствуют GOOGLE:API_KEY или SEARCH_ENGINE_ID")
 
     def perform_search(self, query: str, num_results: int = 5) -> str:
         url = "https://www.googleapis.com/customsearch/v1"
         params = {
             'key': self.api_key,
-            'cx': self.search_engine_id,
+            'cx': self.engine_id,
             'q': query,
             'num': num_results,
             'hl': 'ru'
         }
         try:
-            resp = requests.get(url, params=params)
+            resp = requests.get(url, params=params, timeout=10)
             resp.raise_for_status()
-            items = resp.json().get('items', [])
-            if not items:
-                return "Ничего не найдено."
-            first = items[0]
-            return f"{first['title']}\n{first['snippet']}\n{first['link']}"
         except requests.RequestException as e:
             return f"Ошибка поиска: {e}"
+        items = resp.json().get('items', [])
+        if not items:
+            return "Ничего не найдено."
+        first = items[0]
+        return f"{first['title']}: {first['snippet']} ({first['link']})"
