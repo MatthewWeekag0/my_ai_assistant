@@ -2,15 +2,10 @@
 
 from . import router
 from . import gui
-from . import llm_module
-from . import websearch_module
 from . import system_module
-from . import telegram_module
-from . import word_module
 from . import browser_module
 from . import file_module
-from . import voice_module
-from . import memory_module
+from .core import memory
 
 __all__ = [
     "router",
@@ -23,5 +18,5 @@ __all__ = [
     "browser_module",
     "file_module",
     "voice_module",
-    "memory_module",
+    "memory.py",
 ]
